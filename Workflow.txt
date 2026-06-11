@@ -1,0 +1,348 @@
+# Research Team Agent - Workflow Graph
+
+## Phase 1: Core Architecture 
+
+```mermaid
+graph TD
+    A["👤 User Input<br/>(Research Topic)"] -->|Submit Task| B["🎯 Supervisor Agent<br/>(Orchestrator)"]
+    
+    B -->|Create Subtasks| C["🔍 Research Agent<br/>(Gather Info)"]
+    
+    C -->|V1: LLM Only| C1["Process with LLM<br/>No Tools"]
+    C -->|V2: Add Tools| C2["search tool<br/>Web URLs"]
+    
+    C1 -->|Raw Facts| D["📊 Analysis Agent<br/>(Compare & Reason)"]
+    C2 -->|Raw Facts| D
+    
+    D -->|Advantages<br/>Disadvantages<br/>Key Points| E["✍️ Writer Agent<br/>(Create Report)"]
+    
+    E -->|Draft Report| F["👁️ Reviewer Agent<br/>(Critique)"]
+    
+    F -->|Approved?| G{Quality Check}
+    G -->|✅ Yes| H["📄 Final Report<br/>(Output)"]
+    G -->|❌ No| I["📋 Feedback to Writer"]
+    
+    I -->|Revise| E
+    E -->|Revised Report| F
+    
+    B -->|Collect Outputs| H
+    
+    style A fill:#e1f5ff
+    style B fill:#fff3e0
+    style C fill:#f3e5f5
+    style D fill:#e8f5e9
+    style E fill:#fce4ec
+    style F fill:#f1f8e9
+    style H fill:#c8e6c9
+```
+
+---
+
+## State Management
+
+```python
+class ResearchState(TypedDict):
+    topic: str                    # Original research topic
+    research_notes: str          # Raw facts from Research Agent
+    analysis: dict              # Structured analysis with advantages/disadvantages
+    report: str                 # Draft report from Writer
+    review: dict                # Reviewer feedback
+    approved: bool              # Pass/fail quality check
+    revision_count: int         # Track iteration loops
+```
+
+---
+
+## Agent Flow Details
+
+### Supervisor (Orchestrator)
+```
+Input:  topic
+Tasks:
+  1. Delegate to Research Agent
+  2. Pass results to Analysis Agent
+  3. Forward to Writer Agent
+  4. Collect from Reviewer Agent
+  5. Return final report
+Output: Final report
+```
+
+### Research Agent (Fact Gathering)
+```
+Input:   topic
+V1:      Use LLM context only
+V2:      search(query) → web_urls(link) → extract_text(url)
+Output:  research_notes: [fact1, fact2, fact3, ...]
+```
+
+### Analysis Agent (Comparison & Reasoning)
+```
+Input:   research_notes
+Process: Compare findings, identify tradeoffs
+Output:  {
+           "advantages": [...],
+           "disadvantages": [...],
+           "key_points": [...]
+         }
+```
+
+### Writer Agent (Report Generation)
+```
+Input:   research_notes + analysis
+Format:  Markdown
+Sections:
+  - Introduction
+  - Findings
+  - Comparison Table
+  - Tradeoffs
+  - Conclusion
+Output:  report (markdown)
+```
+
+### Reviewer Agent (Quality Gate)
+```
+Input:   report
+Checks:
+  ✓ Completeness
+  ✓ Contradictions
+  ✓ Clarity
+  ✓ Evidence support
+Output:  {
+           "approved": bool,
+           "feedback": [critique1, critique2, ...],
+           "confidence": 0-1
+         }
+Approval: approved == true
+Revision: approved == false → feedback to Writer
+Loop:    Max 3 iterations
+```
+
+---
+
+## Timeline: Phase-by-Phase Build
+
+### Week 1: Core Orchestration (No Tools)
+```
+├─ Build Supervisor Agent
+├─ Build Research Agent (LLM only)
+├─ Build Analysis Agent
+├─ Build Writer Agent
+├─ Build Reviewer Agent
+└─ Test end-to-end pipeline
+```
+
+**LangGraph Structure:**
+- Nodes: supervisor, research, analysis, writer, reviewer
+- Edges: Linear flow + reviewer → writer loop
+- Termination: When approved == true
+
+### Week 2: Add Search Tool
+```
+├─ Integrate search() tool
+├─ Integrate web_urls() tool
+├─ Integrate extract_text() tool
+├─ Update Research Agent prompt
+└─ Test with real queries
+```
+
+**Tools Integration:**
+```
+Research Agent:
+  ├─ search(query: str) → List[SearchResult]
+  ├─ web_urls(url: str) → str (page content)
+  └─ LLM tool calling
+```
+
+### Week 3: Add Approval Loop
+```
+├─ Implement revision counter
+├─ Retry logic (max 3)
+├─ Prevent infinite loops
+├─ Add quality metrics
+└─ Test edge cases
+```
+
+**Loop Logic:**
+```
+if approved:
+    END
+elif revision_count < 3:
+    revision_count += 1
+    route back to Writer
+else:
+    END (max retries)
+```
+
+### Week 4: Prepare for A2A Evolution
+```
+├─ Decouple agents into services
+├─ Define agent APIs
+├─ Add service interfaces
+└─ Document for multi-service deployment
+```
+
+---
+
+## Key Patterns You'll Learn
+
+| Pattern | Agent | How |
+|---------|-------|-----|
+| **Routing** | Supervisor | Route tasks to correct agent |
+| **Tool Use** | Research | Call search/web tools |
+| **Specialized Prompt** | Analysis | Domain-specific reasoning |
+| **Structured Output** | Writer | Output specific format |
+| **Self-Critique** | Reviewer | Loop back for improvement |
+| **Conditional Flow** | Reviewer → Writer | If approved? route |
+| **State Management** | All | Pass data through TypedDict |
+| **Handoffs** | Supervisor | Pass between agents |
+
+---
+
+## Example Input/Output
+
+### Input
+```
+Topic: Compare YOLO v8 vs DETR for object detection
+```
+
+### Research Agent Output (Week 1)
+```
+YOLO v8:
+- Real-time detection
+- 640x640 input
+- Single-stage detector
+- ~80 FPS on GPU
+
+DETR:
+- Transformer-based
+- Slower inference
+- End-to-end training
+- Better for small objects
+```
+
+### Analysis Agent Output
+```json
+{
+  "advantages": {
+    "YOLO": ["Speed", "Real-time capable", "Simple pipeline"],
+    "DETR": ["End-to-end", "Transformer reasoning", "Flexible"]
+  },
+  "disadvantages": {
+    "YOLO": ["NMS needed", "Fixed grid bias"],
+    "DETR": ["Slower", "Needs more data"]
+  },
+  "key_points": ["YOLO for speed", "DETR for accuracy"]
+}
+```
+
+### Final Report (Markdown)
+```markdown
+# YOLO v8 vs DETR: Object Detection Analysis
+
+## Introduction
+This report compares...
+
+## Architecture Comparison
+| Aspect | YOLO v8 | DETR |
+|--------|---------|------|
+| Speed | ~80 FPS | ~30 FPS |
+| Approach | Single-stage | Transformer |
+
+## Tradeoffs
+YOLO v8 excels in real-time applications...
+DETR provides better accuracy...
+
+## Conclusion
+Choose YOLO for speed, DETR for accuracy.
+```
+
+### Reviewer Feedback
+```json
+{
+  "approved": true,
+  "feedback": [],
+  "confidence": 0.95
+}
+```
+
+---
+
+## Evolution Path to A2A (Week 4+)
+
+### Current: One LangGraph App
+```
+┌─────────────────────────────────┐
+│    LangGraph Application        │
+├─────────────────────────────────┤
+│ ├─ Supervisor                   │
+│ ├─ Research Agent               │
+│ ├─ Analysis Agent               │
+│ ├─ Writer Agent                 │
+│ └─ Reviewer Agent               │
+└─────────────────────────────────┘
+```
+
+### Future: Distributed Services + A2A
+```
+┌──────────────────┐
+│   Research       │    ┌──────────────────┐
+│   Service        │───→│   Analysis       │
+│   (Agent)        │    │   Service        │
+└──────────────────┘    │   (Agent)        │
+                        └──────────────────┘
+                               │
+                               ↓
+                        ┌──────────────────┐
+                        │   Writer         │
+                        │   Service        │
+                        │   (Agent)        │
+                        └──────────────────┘
+                               │
+                               ↓
+                        ┌──────────────────┐
+                        │   Reviewer       │
+                        │   Service        │
+                        │   (Agent)        │
+                        └──────────────────┘
+                               │
+                               ↓
+                        ┌──────────────────┐
+                        │   A2A Protocol   │
+                        │   Communication  │
+                        └──────────────────┘
+```
+
+---
+
+## Implementation Checklist
+
+### Week 1
+- [ ] Set up LangGraph project
+- [ ] Define ResearchState TypedDict
+- [ ] Implement Supervisor agent (routing logic)
+- [ ] Implement Research agent (LLM only)
+- [ ] Implement Analysis agent
+- [ ] Implement Writer agent
+- [ ] Implement Reviewer agent
+- [ ] Build approval loop logic
+- [ ] Test end-to-end
+
+### Week 2
+- [ ] Create search tool wrapper
+- [ ] Create web_urls tool wrapper
+- [ ] Update Research agent to use tools
+- [ ] Test with real queries
+- [ ] Add error handling
+
+### Week 3
+- [ ] Add revision counter
+- [ ] Implement max retry logic
+- [ ] Add quality metrics
+- [ ] Test loop edge cases
+- [ ] Optimize prompts
+
+### Week 4
+- [ ] Document agent interfaces
+- [ ] Prepare service separation
+- [ ] Plan A2A integration
+- [ ] Code review & refactor
