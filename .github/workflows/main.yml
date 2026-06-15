@@ -1,0 +1,29 @@
+name: Resume Screening
+
+on:
+  push:
+    branches:
+      - prasanna.j
+
+jobs:
+  run-python:
+    runs-on: ubuntu-latest
+
+    env:
+      GROQ_API_KEY: ${{ vars.GROQ_API_KEY }}
+      LANGSMITH_API_KEY: ${{ vars.LANGSMITH_API_KEY }}
+      SENDER_EMAIL: ${{ vars.SENDER_EMAIL }}
+      SENDER_PASSWORD: ${{ vars.SENDER_PASSWORD }}
+      LANGSMITH_PROJECT: ${{ vars.LANGSMITH_PROJECT }}
+      LANGSMITH_TRACING_V2: ${{ vars.LANGSMITH_TRACING_V2 }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install langchain-groq langsmith pypdf
+
+      - run: python agent_to_agent.py
