@@ -201,7 +201,7 @@ def notification_agent(
         )
 
 # Main Workflow
-pdf_path = r"C:\Users\prasanna.j\Downloads\Prasanna_resume.pdf"
+pdf_path ="resume/Prasanna_resume.pdf"
 
 job_role = "Data Engineer"
 
