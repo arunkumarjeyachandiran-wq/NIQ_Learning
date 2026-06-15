@@ -9,14 +9,13 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from prompts import PROMPTS
 import os
-from config import (
-    GROQ_API_KEY,
-    LANGSMITH_API_KEY,
-    LANGSMITH_PROJECT,
-    LANGSMITH_TRACING_V2,
-    SENDER_EMAIL,
-    SENDER_PASSWORD
-)
+
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+LANGSMITH_API_KEY = os.getenv("LANGSMITH_API_KEY")
+LANGSMITH_PROJECT = os.getenv("LANGSMITH_PROJECT")
+LANGSMITH_TRACING_V2 = os.getenv("LANGSMITH_TRACING_V2")
+SENDER_EMAIL = os.getenv("SENDER_EMAIL")
+SENDER_PASSWORD = os.getenv("SENDER_PASSWORD")
 
 os.environ["LANGSMITH_API_KEY"] = LANGSMITH_API_KEY
 os.environ["LANGSMITH_TRACING_V2"] = LANGSMITH_TRACING_V2
